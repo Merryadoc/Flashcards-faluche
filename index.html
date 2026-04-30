@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards Faluche</title>
+<style>
+  :root {
+    --bg: #faf9f5; --surface: #ffffff; --surface-2: #f4f2ea;
+    --text: #1a1a1a; --text-2: #6b6b6b; --text-3: #a0a0a0;
+    --border: rgba(0,0,0,0.1); --accent: #1a1a1a;
+    --create: #5b3a8a; --create-bg: #ece4f7;
+    --role: #6b4f1a; --role-bg: #f4eed9;
+    --ancien: #4a4a4a; --ancien-bg: #ebebeb;
+    --todo: #b08a3a; --todo-bg: #faf0d6;
+    --tab-active-bg: #1a1a1a; --tab-active-fg: #faf9f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --surface: #2a2a2a; --surface-2: #262626;
+      --text: #f0f0f0; --text-2: #a0a0a0; --text-3: #6b6b6b;
+      --border: rgba(255,255,255,0.1); --accent: #f0f0f0;
+      --create: #b89dee; --create-bg: #2e2540;
+      --role: #d4b870; --role-bg: #3a3220;
+      --ancien: #b0b0b0; --ancien-bg: #303030;
+      --todo: #e0c47a; --todo-bg: #3a3220;
+      --tab-active-bg: #f0f0f0; --tab-active-fg: #1a1a1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 1.5rem 1rem; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 1.25rem; text-align: center; }
+  .fc-wrap { width: 100%; max-width: 640px; }
+  .fc-tabs-main {
+    display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; justify-content: center;
+  }
+  .fc-tabs-main button {
+    flex: 1; min-width: 130px; padding: 10px 12px; font-size: 13px; font-weight: 500;
+    background: var(--surface); color: var(--text); border: 0.5px solid var(--border);
+    border-radius: 10px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .fc-tabs-main button:hover { background: var(--surface-2); }
+  .fc-tabs-main button.active {
+    background: var(--tab-active-bg); color: var(--tab-active-fg);
+    border-color: transparent;
+  }
+  .fc-tabs-sub {
+    display: none; gap: 5px; margin-bottom: 1rem; flex-wrap: wrap; justify-content: center;
+  }
+  .fc-tabs-sub.visible { display: flex; }
+  .fc-tabs-sub button {
+    padding: 6px 10px; font-size: 11.5px; font-weight: 500;
+    background: var(--surface-2); color: var(--text-2); border: 0.5px solid transparent;
+    border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .fc-tabs-sub button:hover { color: var(--text); }
+  .fc-tabs-sub button.active {
+    background: var(--surface); color: var(--text); border-color: var(--border);
+  }
+  .fc-header { display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; font-size: 13px; color: var(--text-2); }
+  .fc-count { font-weight: 500; color: var(--text); }
+  .fc-mode { display: flex; gap: 6px; }
+  button { font-family: inherit; font-size: 12px; padding: 6px 10px;
+    background: transparent; color: var(--text); border: 0.5px solid var(--border);
+    border-radius: 8px; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease; }
+  .fc-mode button:hover { background: var(--surface-2); }
+  .fc-mode button:active { transform: scale(0.98); }
+  .fc-progress { height: 3px; background: var(--surface-2); border-radius: 2px;
+    overflow: hidden; margin-bottom: 14px; }
+  .fc-progress-bar { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+  .fc-stage { perspective: 1400px; margin-bottom: 16px; }
+  .fc-card { position: relative; width: 100%; min-height: 480px; cursor: pointer;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+  .fc-card.flipped { transform: rotateY(180deg); }
+  .fc-face { position: absolute; inset: 0; backface-visibility: hidden;
+    -webkit-backface-visibility: hidden; display: flex; flex-direction: column;
+    padding: 1.5rem 1.5rem 2rem; background: var(--surface);
+    border: 0.5px solid var(--border); border-radius: 14px; overflow-y: auto; }
+  .fc-front { align-items: center; justify-content: center; text-align: center; }
+  .fc-back { transform: rotateY(180deg); background: var(--surface-2); }
+  .fc-label { font-size: 12px; color: var(--text-2); margin-bottom: 14px;
+    letter-spacing: 0.02em; text-align: center; }
+  .fc-icon { font-size: 42px; margin-bottom: 14px; }
+  .fc-name { font-size: 26px; font-weight: 500; line-height: 1.3; }
+  .fc-back-name { font-size: 17px; font-weight: 500; line-height: 1.3;
+    text-align: center; margin-bottom: 14px; padding-bottom: 12px;
+    border-bottom: 0.5px solid var(--border); }
+  .fc-section { margin-bottom: 14px; }
+  .fc-section-title { font-size: 11px; color: var(--text-2);
+    letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+  .fc-signif { font-size: 13.5px; line-height: 1.55; }
+  .fc-signif ul { margin: 0; padding-left: 18px; }
+  .fc-signif li { margin-bottom: 4px; }
+  .fc-porteurs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fc-porteur { font-size: 12px; padding: 4px 10px; background: var(--surface);
+    border: 0.5px solid var(--border); border-radius: 8px; }
+  .fc-porteur.create {
+    background: var(--create-bg); color: var(--create);
+    border-color: transparent; font-weight: 500;
+  }
+  .fc-porteur.role {
+    background: var(--role-bg); color: var(--role);
+    border-color: transparent; font-weight: 500;
+  }
+  .fc-porteur.ancien {
+    background: var(--ancien-bg); color: var(--ancien);
+    border-color: transparent; font-style: italic;
+  }
+  .fc-porteur.todo {
+    background: var(--todo-bg); color: var(--todo);
+    border-color: transparent; font-style: italic;
+  }
+  .fc-empty { font-size: 13px; color: var(--text-3); font-style: italic; }
+  .fc-hint { text-align: center; font-size: 11px; color: var(--text-3);
+    margin-top: auto; padding-top: 10px; }
+  .fc-controls { display: flex; gap: 8px; }
+  .fc-controls button { flex: 1; padding: 10px 12px; font-size: 14px; }
+  .fc-help { margin-top: 16px; text-align: center; font-size: 11px;
+    color: var(--text-3); line-height: 1.7; }
+  .legend { display: inline-block; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+  .legend.create { background: var(--create-bg); color: var(--create); }
+  .legend.role { background: var(--role-bg); color: var(--role); }
+  .legend.ancien { background: var(--ancien-bg); color: var(--ancien); font-style: italic; }
+  .legend.todo { background: var(--todo-bg); color: var(--todo); font-style: italic; }
+</style>
+</head>
+<body>
+ 
+<h1>🎓 Flashcards Faluche</h1>
+ 
+<div class="fc-wrap">
+  <div class="fc-tabs-main">
+    <button data-cat="decernements" class="active">🏆 Décernements</button>
+    <button data-cat="ordres">⚜️ Ordres</button>
+    <button data-cat="rubans">🎀 Rubans</button>
+    <button data-cat="autres">🪙 Insignes & co</button>
+  </div>
+ 
+  <div class="fc-tabs-sub" id="fc-tabs-sub">
+    <button data-sub="insignes" class="active">Insignes</button>
+    <button data-sub="elus">Insignes d'élus</button>
+    <button data-sub="region">Insignes de région</button>
+    <button data-sub="sanctions">Sanctions</button>
+  </div>
+ 
+  <div class="fc-header">
+    <span><span id="fc-cat-label">Décernement</span> <span class="fc-count" id="fc-position">1 / 36</span></span>
+    <div class="fc-mode">
+      <button id="fc-btn-shuffle">Mélanger</button>
+      <button id="fc-btn-reset">Reset</button>
+    </div>
+  </div>
+ 
+  <div class="fc-progress"><div class="fc-progress-bar" id="fc-bar" style="width: 2.7%;"></div></div>
+ 
+  <div class="fc-stage">
+    <div class="fc-card" id="fc-card">
+      <div class="fc-face fc-front">
+        <div class="fc-label" id="fc-front-label">Décernement</div>
+        <div class="fc-icon" id="fc-icon"></div>
+        <div class="fc-name" id="fc-name">—</div>
+        <div class="fc-hint">Clique pour révéler</div>
+      </div>
+      <div class="fc-face fc-back">
+        <div class="fc-back-name" id="fc-back-name">—</div>
+        <div class="fc-section">
+          <div class="fc-section-title" id="fc-signif-title">Signification</div>
+          <div class="fc-signif" id="fc-signif">—</div>
+        </div>
+        <div class="fc-section" id="fc-creators-section">
+          <div class="fc-section-title">Créateurs</div>
+          <div class="fc-porteurs" id="fc-creators"></div>
+        </div>
+        <div class="fc-section" id="fc-porteurs-section">
+          <div class="fc-section-title">Porteurs actuels (<span id="fc-count-porteurs">0</span>)</div>
+          <div class="fc-porteurs" id="fc-porteurs"></div>
+        </div>
+        <div class="fc-section" id="fc-anciens-section">
+          <div class="fc-section-title">Anciens porteurs</div>
+          <div class="fc-porteurs" id="fc-anciens"></div>
+        </div>
+        <div class="fc-hint">Clique pour retourner</div>
+      </div>
+    </div>
+  </div>
+ 
+  <div class="fc-controls">
+    <button id="fc-prev">← Précédent</button>
+    <button id="fc-flip">Retourner</button>
+    <button id="fc-next">Suivant →</button>
+  </div>
+ 
+  <div class="fc-help">
+    Raccourcis : <strong>Espace</strong> retourne · <strong>←/→</strong> navigue · <strong>S</strong> mélange<br>
+    Légende :
+    <span class="legend create">Créateur</span> ·
+    <span class="legend role">Rôle</span> ·
+    <span class="legend ancien">Ancien</span> ·
+    <span class="legend todo">Non résolu</span>
+  </div>
+</div>
+ 
+<script>
+// ============================================================================
+// DATA — Toutes les flashcards consolidées
+// ============================================================================
+const ALL_DATA = {
+  decernements: {
+    label: "Décernement",
+    signifLabel: "Signification",
+    cards: [
+      { nom: "Bacchus", signif: "Dignité dans l'ivresse", porteurs: [], anciens: [] },
+      { nom: "Bacchus troué", signif: "Buveur d'eau", porteurs: ["Iris de Yourcenar"], anciens: [] },
+      { nom: "Sou troué", signif: "Nuit au poste pour motif étudiant", porteurs: [], anciens: [] },
+      { nom: "Chauve-souris", signif: "Nuits blanches pour motif associatif", porteurs: [{name:"Gulliver intronisé Khal Drogo"}, {name:"Dr WHATson"}, {name:"Imhotep"}], anciens: [] },
+      { nom: "Fourchette sur ruban bordeaux", signif: "A organisé un grand dîner", porteurs: [{name:"Atlas l'Insoumis"}, {name:"Gulliver intronisé Khal Drogo"}], anciens: [] },
+      { nom: "Fourchette sur ruban bleu", signif: "Cordon bleu", porteurs: [{name:"Atlas l'Insoumis"}], anciens: [] },
+      { nom: "Balais croisé chope de bière", signif: "Plus beau vomicoptère", porteurs: [], anciens: [] },
+      { nom: "Balais à l'endroit", signif: "Fée du logis", porteurs: [{name:"Merryadoc"}], anciens: [] },
+      { nom: "Balais à l'envers", signif: "Déchet à mettre à la poubelle", porteurs: [{name:"Jean Barde de la Fontaine"}, {name:"Jean le Clown intronisé Nika"}, {name:"Néo intronisé Dracarys réintronisé Haku 2.0"}], anciens: [] },
+      { nom: "Balais sur ruban d'asso", signif: "Acte héroïque de nettoyage lors d'une mission associative", porteurs: [], anciens: [] },
+      { nom: "Pachyderme", signif: "Gros lourd", porteurs: [{name:"MadJackAss"}], anciens: [] },
+      { nom: "Entonnoir à l'envers", signif: "Ringard", porteurs: [{name:"Pink Lady Di"}, {name:"Delirium 7remance"}], anciens: [] },
+      { nom: "Entonnoir à l'endroit", signif: "Petite caisse", porteurs: [], anciens: [] },
+      { nom: "F", signif: "Digne faluchard", porteurs: [], anciens: [] },
+      { nom: "Coq", signif: "Grande gueule sachant l'ouvrir, retourné après minuit", porteurs: [], anciens: [] },
+      { nom: "Epi de blé", signif: "Radin / Gratteur", porteurs: [], anciens: [] },
+      { nom: "Escargot", signif: "Lenteur à la tâche", porteurs: [{name:"Fu J.Yama"}], anciens: [] },
+      { nom: "Volant", signif: "As du volant", porteurs: [{name:"Titania"}, {name:"Kirby"}], anciens: [] },
+      { nom: "Taureau", signif: "Grand reproducteur", porteurs: [{name:"Kirby"}], anciens: [] },
+      { nom: "Perroquet", signif: "Pinailleur", porteurs: [{name:"Dame Arlequin"}], anciens: [] },
+      { nom: "Poule", signif: "Personne chaude", porteurs: [{name:"Snoop Doug"}, {name:"WreckingBi intronisée Tsunade"}], anciens: [] },
+      { nom: "Cor de chasse", signif: "Grand chasseur devant l'éternel", porteurs: [{name:"Quasar KO intronisé KRONOS"}], anciens: [] },
+      { nom: "Scie", signif: "Blessure en évènement étudiant ayant nécessité une opération", porteurs: [{name:"Sirius"}], anciens: [] },
+      { nom: "Brebis", signif: "Mouton", porteurs: [{name:"Black Swan"}, {name:"Quasar KO intronisé KRONOS"}], anciens: [] },
+      { nom: "Ours", signif: "Gros râleur", porteurs: [{name:"Gulliver intronisé Khal Drogo"}, {name:"Atlas l'Insoumis"}, {name:"Rey"}, {name:"Freyja"}], anciens: [] },
+      { nom: "Hache", signif: "Acte héroïque / A ramené un trophée", porteurs: [{name:"Gulliver intronisé Khal Drogo"}, {name:"Bakkus Krassus"}, {name:"Onyx intronisée La Peintresse"}, {name:"Belmondo intronisé Dante"}, {name:"Quasar KO intronisé KRONOS"}, {name:"Arlo"}, {name:"MadJackAss"}, {name:"Spirit"}, {name:"Auguste"}, {name:"Carmen"}, {name:"Kirby"}, {name:"Néo intronisé Dracarys réintronisé Haku 2.0"}], anciens: [] },
+      { nom: "Zéro", signif: "Mort avant minuit", porteurs: [{name:"Néo intronisé Dracarys réintronisé Haku 2.0"}], anciens: [] },
+      { nom: "Koala", signif: "Force tranquille", porteurs: [{name:"Onyx intronisée La Peintresse"}, {name:"Fu J.Yama"}], anciens: [] },
+      { nom: "Clé de Sol", signif: "Digne chanteur de paillarde", porteurs: [{name:"Bartholomeus"}, {name:"Oompa Loumpette"}, {name:"Belmondo intronisé Dante"}], anciens: [] },
+      { nom: "Tête de mort croisé lyre", signif: "Piètre chanteur de paillardes", porteurs: [], anciens: [] },
+      { nom: "Singe", signif: "Quémandeur d'insigne", porteurs: [{name:"Kirby"}, {name:"Le Soliste"}], anciens: [] },
+      { nom: "Abeille sur circulaire", signif: "Cursus exemplaire", porteurs: [], anciens: [] },
+      { nom: "Abeille sur ruban d'asso", signif: "Travail et minutie associative", porteurs: [{name:"Kirby"}], anciens: [] },
+      { nom: "Palme sur ruban d'asso", signif: "Remerciement pour travail associatif", porteurs: [{name:"Zaza la Débrouille"}, {name:"Colombe"}], anciens: [] },
+      { nom: "Double palme sur ruban d'asso", signif: "Remerciement pour travail associatif (renforcé)", porteurs: [], anciens: [] },
+      { nom: "Ecureuil sur ruban pailleté", signif: "Boule d'énergie", porteurs: [{name:"Jean le Clown intronisé Nika"}, {name:"Sirius"}], anciens: [] }
+    ]
+  },
+  ordres: {
+    label: "Ordre",
+    signifLabel: "Représentation",
+    cards: [
+      { nom: "Narco", icon: "😴", signif: ["Narco ⇒ Ours croisé flèche en partie insigne", "Grand Narco ⇒ Ours croisé flèche sur velours blanc en partie insigne"], createurs:["Kase de Plougastel"], porteurs: [{name:"Auguste",role:"Grand Narco"},{name:"Merryadoc"},{name:"Bartholomeus"},{name:"Black Swan"},{name:"L'Alchimiste"},{name:"Carmen"},{name:"Atlas l'Insoumis"},{name:"Vicomte de Rostand"},{name:"Gamabunta"},{name:"Gulliver intronisé Khal Drogo"},{name:"Père Castor"},{name:"Bakkus Krassus"},{name:"Jean Faon de Polichinel"},{name:"D'Artagnan"},{name:"Freyja"},{name:"Fu J.Yama"},{name:"Belmondo intronisé Dante"},{name:"Pink Lady Di"},{name:"Ymir"},{name:"Volt intronisé Argos"}], anciens:[{name:"Nimbus",role:"Ancien Grand"},{name:"Molière le Philantrope",role:"Ancien Grand"},{name:"Forest",role:"Ancien Grand"},{name:"Nostradamus",role:"Ancien Grand"}] },
+      { nom: "Grelots", icon: "🔔", signif: ["Grelot ⇒ Double cordon aux couleurs de la fillière du grelotisé et du grelotisant, pendant de la partie privée avec un grelot au bout","Grand grelot ⇒ Ajout d'un cordon blanc élastique et de 2 grelots"], createurs:["Appolo dit le Bon"], porteurs: [{name:"Bartholomeus",role:"Grand grelot"},{name:"Néo intronisé Dracarys réintronisé Haku 2.0"},{name:"L'Affranchie"},{name:"Black Swan"},{name:"Auguste"},{name:"Raven"},{name:"Titania"},{name:"Freyja"},{name:"JOKER"},{name:"Jean le Clown intronisé Nika"},{name:"Onyx intronisée La Peintresse"},{name:"Oompa Loumpette"},{name:"L'Alchimiste"},{name:"Fu J.Yama"},{name:"Bastet"},{name:"WreckingBi intronisée Tsunade"},{name:"Quasar KO intronisé KRONOS"},{name:"Invicthum intronisé Jacquemuse"},{name:"Zaza la Débrouille"},{name:"Belmondo intronisé Dante"},{name:"Delirium 7remance"},{name:"Magnum"},{name:"GOReGONEION"},{name:"Gulliver intronisé Khal Drogo"},{name:"Imhotep"},{name:"Volt intronisé Argos"},{name:"Frère TRIboulet"},{name:"Jean Barde de la Fontaine"}], anciens:[{name:"Jean D. Haddock",role:"Ancien Grand"},{name:"Frère Luron",role:"Ancien Grand"},{name:"Goudurix",role:"Ancien Grand"},{name:"Le Byzantin",role:"Ancien Grand"}] },
+      { nom: "La Meute", icon: "🐺", signif: ["Tête de loup sur velours blanc tâché de sang en temporal droit"], createurs:["Mata Hari","Lutopique"], porteurs:[{name:"Jean le Clown intronisé Nika"},{name:"Bartholomeus"},{name:"JOKER"},{name:"Catarina"}], anciens:[] },
+      { nom: "Jarretières", icon: "👯‍♀️", signif: ["Jarretière ⇒ Poule sur dentelle noire en temporal droite","Grande Jarretière ⇒ Poule recouverte de dentelle rouge sur dentelle noire en temporal droit"], createurs:["Hippodium"], porteurs:[{name:"Freyja",role:"Grande Jarretière"},{name:"Black Swan"},{name:"WreckingBi intronisée Tsunade"},{name:"Mayhem"},{name:"Onyx intronisée La Peintresse"},{name:"Titania"},{name:"Oompa Loumpette"},{name:"Mamma Mia !"},{name:"Bastet"}], anciens:[{name:"L'Affranchie",role:"Ancienne Grande"},{name:"Meweeda",role:"Ancienne Grande"},{name:"La Rose Ecarlate",role:"Ancienne Grande"},{name:"Chihiro",role:"Ancienne Grande"},{name:"L'Oxymore",role:"Ancienne Grande"},{name:"Misstinguette",role:"Ancienne Grande"},{name:"Mata Hari",role:"Ancienne Grande"}] },
+      { nom: "OAP", icon: "🥃", signif: ["OAP en lettres d'or horizontales sur velours jaune en temporal droit"], createurs:[], porteurs:[{name:"Magnum"},{name:"JOKER"},{name:"MadJackAss"},{name:"L'Affranchie"},{name:"Quasar KO intronisé KRONOS"},{name:"Bartholomeus"},{name:"Belmondo intronisé Dante"},{name:"Pierrot"},{name:"Le Soliste"}], anciens:[] },
+      { nom: "Biggeur", icon: "💉", signif: ["Biggeur ⇒ Seringue en partie insigne"], createurs:["Mawy TREZ","Jean D. Haddock","Sans Plomb 98 intronisé Kim Jong Weed"], porteurs:[{name:"Atlas l'Insoumis"},{name:"Quasar KO intronisé KRONOS"},{name:"WreckingBi intronisée Tsunade"},{name:"Kirby"},{name:"Fu J.Yama"},{name:"Magnum"},{name:"Arlo"},{name:"Bakkus Krassus"}], anciens:[] },
+      { nom: "Théières", icon: "🫖", signif: ["Théière ⇒ Taste-vin croisé Serpent en partie insigne","Grande Théière ⇒ GT sur Taste-vin croisé Serpent en partie insigne","Grande Sucrière ⇒ GS sur Taste-vin croisé Serpent en partie insigne"], createurs:["Mercury","Divan de Kamp intronisé Khaleesi"], porteurs:[{name:"Arlo",role:"Grande Théière"},{name:"Kirby"},{name:"Quasar KO intronisé KRONOS"},{name:"WreckingBi intronisée Tsunade"},{name:"Fulmina"}], anciens:[] },
+      { nom: "Nakama", icon: "🇯🇵", signif: ["Nakama ⇒ Satin blanc cousu de fil rouge en partie insigne","Saké Kagé ⇒ Satin rouge cousu de fil blanc avec une pièce de 50 yen","Dai Kagé ⇒ Satin rouge cousu de fil blanc avec une pièce de 5 yen"], createurs:["Hiatus","Boule de Neige"], porteurs:[{name:"Fu J.Yama",role:"Dai Kagé"},{name:"Jean Barde de la Fontaine",role:"Saké Kagé"},{name:"Merryadoc"},{name:"Néo intronisé Dracarys réintronisé Haku 2.0"},{name:"Raven"},{name:"Snoop Doug"},{name:"Colombe"},{name:"Bartholomeus"},{name:"Atlas l'Insoumis"},{name:"Zaza la Débrouille"},{name:"Titania"},{name:"Mayhem"},{name:"Magnum"},{name:"Delirium 7remance"},{name:"Satyricus intronisé Arthas"},{name:"Arlo"},{name:"Volt intronisé Argos"},{name:"Gamabunta"},{name:"Le Soliste"},{name:"L'Alchimiste"},{name:"Pierrot"},{name:"Dr WHATson"},{name:"Jean le Clown intronisé Nika"},{name:"Léonhard"},{name:"Tcheng D.Teach"}], anciens:[{name:"Bès le Furieux",role:"Ancien Dai Kagé"},{name:"Boule de Neige",role:"Ancien Dai Kagé"},{name:"Calipso",role:"Ancien Saké Kagé"},{name:"Frère Jacques le Tranquille",role:"Ancien Saké Kagé"},{name:"Hiatus",role:"Ancien Saké Kagé"}] },
+      { nom: "Buffalo", icon: "🐂", signif: ["Sou troué croisé tête de vache en partie insigne"], createurs:[], porteurs:[{name:"Bartholomeus"},{name:"Auguste"},{name:"Mistrale"},{name:"MadJackAss"},{name:"Belmondo intronisé Dante"},{name:"Néo intronisé Dracarys réintronisé Haku 2.0"},{name:"Colombe"},{name:"Gulliver intronisé Khal Drogo"},{name:"Jean le Clown intronisé Nika"},{name:"Le Soliste"},{name:"Vicomte de Rostand"},{name:"Volt intronisé Argos"},{name:"Pierrot"},{name:"JOKER"}], anciens:[] },
+      { nom: "Pailleteuses", icon: "🎊", signif: ["Pailleteuses ⇒ Cerf sur ruban pailleté en partie insigne","Emissaires Pailleteuses ⇒ Cerf croisé flèche sur ruban pailleté en partie insigne"], createurs:["Molière le Philantrope","Marie-Antoinette"], porteurs:[{name:"Invicthum intronisé Jacquemuse",role:"Grande"},{name:"Rey",role:"Grande"},{name:"WreckingBi intronisée Tsunade"},{name:"Gulliver intronisé Khal Drogo"},{name:"Devos"},{name:"Dr WHATson"},{name:"Mamma Mia !"},{name:"Iris de Yourcenar"},{name:"Alice in Lalaland"},{name:"Ymir"},{name:"Plot Twist"},{name:"Yûkisen"},{name:"Freyja"},{name:"Arlo"},{name:"Dame Arlequin"},{name:"Wander Woman"},{name:"Pink Lady Di"},{name:"Fulmina"},{name:"La Môme"},{name:"Colombe"},{name:"Oompa Loumpette"},{name:"Aphrodisias"},{name:"Osono Di Dolto"},{name:"Qu33n Hach!ko"},{name:"Amateraus 1.1"}], anciens:[{name:"Athéna",role:"Ancienne Grande"},{name:"Rainha Bianca",role:"Ancienne Grande"}] },
+      { nom: "RNAR", icon: "🦊", signif: ["Renard (fennec) sur velours rasta (vert, rouge et jaune)"], createurs:["Rnardinho"], porteurs:[{name:"Fu J.Yama"},{name:"Kirby"},{name:"WreckingBi intronisée Tsunade"},{name:"Sirius"},{name:"Black Swan"},{name:"Quasar KO intronisé KRONOS"},{name:"Måneskin"},{name:"Imhotep"},{name:"Snoop Doug"},{name:"L'Affranchie"},{name:"Oompa Loumpette"},{name:"Rey"},{name:"Raven"},{name:"Invicthum intronisé Jacquemuse"},{name:"Pink Lady Di"},{name:"Zaza la Débrouille"},{name:"Ymir"},{name:"Titania"},{name:"Freyja"}], anciens:[] },
+      { nom: "Gros", icon: "🍇", signif: ["Gros ⇒ Bacchus sur velours noir en temporal droit","Gros dans l'âme ⇒ GDA en lettres dorées verticales sur velours noir en temporal droit","Gros gros ⇒ Bacchus sur GG en lettres dorée sur velours noir en temporal droit"], createurs:["Pantagruel"], porteurs:[{name:"Atlas l'Insoumis",role:"Grand"},{name:"Bartholomeus",role:"Gros dans l'âme"},{name:"Auguste",role:"Gros dans l'âme"},{name:"Quasar KO intronisé KRONOS",role:"Gros dans l'âme"},{name:"Kirby"},{name:"Gulliver intronisé Khal Drogo"},{name:"L'Alchimiste"},{name:"Delirium 7remance"},{name:"Bakkus Krassus"},{name:"Tcheng D.Teach"},{name:"Sœur Loki"}], anciens:[{name:"Gargantua",role:"Ancien Grand"},{name:"Billy Jones l'Exalté",role:"Ancien Grand"},{name:"Petit Jean du Grandgousier",role:"Ancien Grand"},{name:"Gargamelle dit la Brute",role:"Ancien Grand"},{name:"Appolo dit le Bon",role:"Ancien Grand"},{name:"Nimbus",role:"Ancien Gros dans l'âme"}] },
+      { nom: "Couturières", icon: "🪡", signif: ["Couturière ⇒ Paire de ciseaux sur broderie noire sur velours et satin blanc","Grande Couturière ⇒ 2 paires de ciseaux sur broderie blanche sur velours et satin blanc"], createurs:["Cendrillon"], porteurs:[{name:"Sirius",role:"Grande Couturière"},{name:"Merryadoc"},{name:"Amateraus 1.1"},{name:"Titania"},{name:"Lilith"},{name:"Imhotep"}], anciens:[{name:"Oscar le Sartorial",role:"Ancienne Grande"},{name:"Matoaka intronisée La Louve",role:"Ancienne Grande"},{name:"Marie-Antoinette",role:"Ancienne Grande"}] },
+      { nom: "Big Boobs", icon: "🍒", signif: ["Big Boobs ⇒ BB en lettres d'or (Petit b ou grand B en fonction de la taille des seins) sur dentelle noire en temporal gauche","Grande Big Boobs ⇒ BB en lettres d'or sur dentelle rouge","Grande Sous-peseuse ⇒ Balance sur dentelle noire en temporal gauche"], createurs:["Duchesse"], porteurs:[{name:"Raven",role:"Grande"},{name:"Carmen",role:"Grande Sous-peseuse"},{name:"L'Affranchie"},{name:"WreckingBi intronisée Tsunade"},{name:"Fulmina"},{name:"Sirius"},{name:"Titania"},{name:"Ymir"},{name:"Rey"},{name:"Catarina"},{name:"Freyja"},{name:"Onyx intronisée La Peintresse"},{name:"Kirby"},{name:"Bastet"},{name:"La Môme"},{name:"Amateraus 1.1"},{name:"Måneskin"},{name:"Qu33n Hach!ko"}], anciens:[{name:"Kiddo",role:"Ancienne Grande"},{name:"Lotus",role:"Ancienne Grande"},{name:"Misstinguette",role:"Ancienne Grande"},{name:"Black Swan",role:"Ancienne Grande Sous-peseuse"},{name:"Nimbus",role:"Ancienne Grande Sous-peseuse"},{name:"Scandal",role:"Ancienne Grande Sous-peseuse"},{name:"Frère Tcheese",role:"Ancien.ne Grande Sous-peseuse"},{name:"THOR",role:"Ancien.ne Grande Sous-peseuse"}] }
+    ]
+  },
+  rubans: {
+    label: "Ruban",
+    signifLabel: "Signification",
+    cards: [
+      { nom: "A2SUP", icon: "📚", signif: "Entrecroisé de satin bordeaux tirant vers le violet pour les LAS Sciences et les couleurs de l'UP, satin jaune des LAS SH et de la représentation étudiante, velours blanc du PASS (couleur neutre pour toutes les filières de santé) et de l'entraide", createurs:["Rainha Bianca","Nutz","Robin des Bois intronisé Liber Pater"], porteurs:["Quasar KO intronisé KRONOS","WreckingBi intronisée Tsunade","MasterΩmind","Pink Lady Di","Charlie CaChill","Tabass'coco","Wander Woman","Jean Barde de la Fontaine","Zaza la Débrouille","MadJackAss","Magnum","Vanellope","Aphrodisias","Lilith","Frère TRIboulet","Président GrothenDick","Osono Di Dolto","+ 11 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "ACRP", icon: "🦁", signif: "Entrecroisé de velours vert de la peau du serpent et rouge pour son regard, couleurs de l'AMPC et de l'AVC, et blanc nacré de la peau du lion", createurs:["Darkstiny's Child intronisée Dalaï-Mamma"], porteurs:["Yûkisen","Néo intronisé Dracarys réintronisé Haku 2.0","Président GrothenDick","Père Castor","Vicomte de Rostand","Lafayette"], anciens:[] },
+      { nom: "AGEP", icon: "🗼", signif: "Croision de velours bleu et rouge sur satin lilas", createurs:["Sodomikibite"], porteurs:["Osono Di Dolto","+ 1 autre porteur (non résolu)"], anciens:[] },
+      { nom: "AMPc", icon: "🎀", signif: "Satin bleu clair de Cochin, velours blanc de Necker et velours orange de Broussais Hôtel-Dieu — porté par tous les faluchards de Paris Descartes (et ceux de l'UP ayant été à un moment étudiants à Paris Descartes)", createurs:["Sodomikibite"], porteurs:[], anciens:[] },
+      { nom: "ANEMF", icon: "🇫🇷", signif: "Administrateur ⇒ Ruban tricolore simple ; Membre du bureau, VP et CM ⇒ Ruban tricolore entouré de 2 liserés blancs ; Président ⇒ Ruban tricolore entouré de 2 bandes blanches", createurs:[], porteurs:["Père Castor","Lafayette"], anciens:[] },
+      { nom: "BDA", icon: "👨🏻‍🎨", signif: "Velours vert prairie sur vert bouteille, couleurs des 2 premiers pulls verts de l'asso", createurs:["Nazdrowje"], porteurs:["Vicomte de Rostand","La Môme","Zaza la Débrouille","Dr WHATson","Paloma","Devos","Frère TRIboulet","MasterΩmind","Yûkisen","+ 6 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "BDL", icon: "🌐", signif: "Velours blanc poutré de velours orange", createurs:["Simba"], porteurs:["Néo intronisé Dracarys réintronisé Haku 2.0","Dr WHATson","+ 1 autre porteur (non résolu)"], anciens:[] },
+      { nom: "BDS", icon: "🎽", signif: "Velours bleu et rouge, couleurs du Rugby Club de Bichat", createurs:["Biscotte"], porteurs:["Pierrot","+ 2 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "Blouses Brothers", icon: "🎼", signif: "Velours rouge sur velours noir, pour le sang qui coule des oreilles", createurs:["Frère Frakass"], porteurs:["Imhotep","Måneskin","+ 1 autre porteur (non résolu)"], anciens:[] },
+      { nom: "C2P1", icon: "🎀", signif: "Velours fuschia, violet et rouge", createurs:["Sodomikibite"], porteurs:[], anciens:[] },
+      { nom: "CNCP", icon: "🟡", signif: "Le rayonnement du cercle sur l'écume en pleine mer ⇒ Ruban de velours jaune pour le soleil tressé de velours blanc de l'écume et bleu foncé des abysses", createurs:["Pendragon","Nautilus","Hemingwait intronisé Amercurian Pie","Loyal","Maître Lupin"], porteurs:["Pierrot","JOKER","+ 4 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "CRS", icon: "👹", signif: "Cuir noir de Bichat violence sur velours rose des critards de PD et velours bordeaux des critards de l'UP", createurs:["Bès le Furieux"], porteurs:["Kirby","Quasar KO intronisé KRONOS","Néo intronisé Dracarys réintronisé Haku 2.0","MadJackAss","Magnum","GOReGONEION","Mistrale","Bastet","Mayhem","+ 22 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "CSM", icon: "🎀", signif: "(Signification non renseignée dans Notion)", createurs:[], porteurs:["+ 1 porteur (non résolu)"], anciens:[] },
+      { nom: "Heartbeats", icon: "🎇", signif: "Ruban arc-en-ciel du désordre critard du son (en satin car pas que santé) entrecroisé de ruban pailleté pour la fête et d'un liseré rouge pour la médecine", createurs:["Imhotep","Måneskin"], porteurs:[], anciens:[] },
+      { nom: "Humanitaire et environnemental", icon: "🎀", signif: "Velours blanc", createurs:[], porteurs:["Wander Woman","Yûkisen","+ 1 autre porteur (non résolu)"], anciens:[] },
+      { nom: "Hygie", icon: "🐍", signif: "Velours blanc de la santé tressé de velours vert du serpent et noir pailleté pour les flashs des soirées, et qu'ils font briller la filière en soirée", createurs:["Psychée","Coq au vin","ACAB"], porteurs:["Néo intronisé Dracarys réintronisé Haku 2.0","Mayhem","Lempicka","Kat Knight","Charlie CaChill","+ 1 autre porteur (non résolu)"], anciens:[] },
+      { nom: "Journal de la fac", icon: "🎀", signif: "Satin blanc", createurs:[], porteurs:["Kirby"], anciens:[] },
+      { nom: "L'Artésienne", icon: "👯", signif: "Satin blanc sur bordeaux", createurs:["Aziz"], porteurs:[], anciens:[] },
+      { nom: "LCS", icon: "🐎", signif: "Velours noir et blanc de l'échiquier sur satin bleu de la Seine", createurs:["Billy Jones l'Exalté"], porteurs:["Merryadoc","Néo intronisé Dracarys réintronisé Haku 2.0","+ 3 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "Médicus musica", icon: "🎶", signif: "Satin doré sur croisillons de velours blanc et bleu pour les flash de la scène", createurs:["+ 1 créateur (non résolu)"], porteurs:["+ 1 porteur (non résolu)"], anciens:[] },
+      { nom: "NEMO", icon: "🐠", signif: "Tresses de satin noir et blanc sur satin orange, rayures du poisson clown", createurs:["KK maro"], porteurs:["Armor Amore","+ 1 autre porteur (non résolu)"], anciens:[] },
+      { nom: "OTC", icon: "🟣", signif: "Satin violet entrecroisé de velours noir et blanc", createurs:["Sherloque"], porteurs:["Vanellope","Armor Amore","WreckingBi intronisée Tsunade","Quasar KO intronisé KRONOS","Snoop Doug","Kirby","Jean Barde de la Fontaine","Wander Woman","Osono Di Dolto","Jean Faon de Polichinel","Aphrodisias","Dame Arlequin","Gamabunta","Plot Twist","Boule de Neige","Devos","Yûkisen"], anciens:[] },
+      { nom: "Pink Ladies", icon: "🦩", signif: "Satin gris pailleté, velours rose et blanc", createurs:["Peter Paon Intronisé Crazy HOErse","Swalalala"], porteurs:[], anciens:[] },
+      { nom: "Plaies Mobiles", icon: "🎷", signif: "Tissu de combar orange entrecroisé de ruban pailleté doré et argenté", createurs:["+ 1 créateur (non résolu)"], porteurs:["+ 1 porteur (non résolu)"], anciens:[] },
+      { nom: "Solid'UP", icon: "🤲🏻", signif: "Ruban tressé de velours blanc de la solidarité entrecroisé d'une petite main et d'une grande main de satin bleu, une main qui donne et une main qui reçoit", createurs:["Snoop Doug","Oompa Loumpette"], porteurs:["Ymir","Sirius","Wander Woman","WreckingBi intronisée Tsunade","Bastet","Fulmina","Oompa Loumpette","Paloma","Tabass'coco","Charlie CaChill","+ 2 autres porteurs (non résolus)"], anciens:[] },
+      { nom: "Team UP", icon: "📕", signif: "Velours rouge et bordeaux sur velours blanc", createurs:["Molière le Philantrope"], porteurs:["Måneskin"], anciens:[] },
+      { nom: "UP", icon: "🆙", signif: "Velours rose de PD et velours blanc enroulé sur un satin bordeaux pour les couleurs de l'UP qui est une fac de santé mais pas que. Et 1 seul chat de Bichat car on a perdu l'autre à la fusion", createurs:["Darkstiny's Child intronisée Dalaï-Mamma","Peter Paon Intronisé Crazy HOErse","Lotus"], porteurs:[], anciens:[] }
+    ]
+  },
+  autres: {
+    label: "Insigne",
+    signifLabel: "Signification",
+    sub: {
+      insignes: {
+        label: "Insigne",
+        cards: [
+          { nom: "Pensée", icon: "🌷", signif: "Fine baiseuse", porteurs: [], anciens: ["Boule de Neige","+ 4 autres anciens porteurs (non résolus)"] },
+          { nom: "Fontaine", icon: "⛲", signif: "Femme fontaine", porteurs: [], anciens: [] },
+          { nom: "Clé", icon: "🗝️", signif: "Chef de ville au CRIT", porteurs: ["Kirby","MadJackAss","+ 5 autres porteurs (non résolus)"], anciens: [] },
+          { nom: "Lacet de cuir", icon: "🪢", signif: "Pratique du BDSM", porteurs: [], anciens: [] },
+          { nom: "Epée", icon: "🗡️", signif: "Fin baiseur", porteurs: [], anciens: ["Bès le Furieux","THOR","+ 2 autres anciens porteurs (non résolus)"] },
+          { nom: "C croisé Lyre", icon: "🆑", signif: "Chef de Chorale", porteurs: ["JOKER","Måneskin","Merryadoc","MadJackAss","Ymir","Oompa Loumpette","Devos","+ 3 autres porteurs (non résolus)"], anciens: ["Coq au vin","Gargantua","Billy Jones l'Exalté","Armor Amore","+ 11 autres anciens porteurs (non résolus)"] },
+          { nom: "Flèche", icon: "🏹", signif: "Ejaculateur précoce", porteurs: [], anciens: [] },
+          { nom: "Parapluie fermé", icon: "🌂", signif: "A vomi dans sa faluche", porteurs: [], anciens: [] },
+          { nom: "Parapluie ouvert", icon: "☔", signif: "A vomi dans sa faluche et s'est recoiffé ou a bu dedans", porteurs: ["Kirby","Black Swan","Gargantua","+ 1 autre porteur (non résolu)"], anciens: [] },
+          { nom: "Lime", icon: "🪛", signif: "Acte laborieux", porteurs: [], anciens: ["+ 1 ancien porteur (non résolu)"] },
+          { nom: "C croisé menottes", icon: "🕺🏻", signif: "Chef Chaudron", porteurs: ["Mayhem","Aphrodisias","Tabass'coco","La Môme","+ 4 autres porteurs (non résolus)"], anciens: ["Mercury"] },
+          { nom: "Menottes", icon: "👮🏻‍♂️", signif: "Chaudière ou chaudron au CRIT", porteurs: ["Kirby","Jean Barde de la Fontaine","Frère TRIboulet","+ 3 autres porteurs (non résolus)"], anciens: ["Gargantua"] }
+        ]
+      },
+      elus: {
+        label: "Insigne d'élu",
+        cards: [
+          { nom: "Tortue dorée", icon: "🐢", signif: "Élu au CNOUS", porteurs: [], anciens: [] },
+          { nom: "Tortue argentée", icon: "🐢", signif: "Élu au CROUS", porteurs: [], anciens: ["+ 1 ancien porteur (non résolu)"] },
+          { nom: "Etoile argentée", icon: "✴️", signif: "VP étudiant d'UFR/Facultaire ou de CA d'IUT", porteurs: ["Lafayette"], anciens: ["+ 1 ancien porteur (non résolu)"] },
+          { nom: "Grenouille argentée", icon: "🐸", signif: "1 par année d'élection au conseil d'UFR ou au conseil de pédagogie", porteurs: ["Wander Woman","Quasar KO intronisé KRONOS","Président GrothenDick","Vicomte de Rostand","Tabass'coco","Lafayette","Fulmina","Dame Arlequin","+ 8 autres porteurs (non résolus)"], anciens: ["Nautilus","+ 4 autres anciens porteurs (non résolus)"] },
+          { nom: "Escargot doré", icon: "🐌", signif: "1 par année d'élection au CA facultaire ou de formation facultaire", porteurs: ["+ 4 porteurs (non résolus)"], anciens: [] },
+          { nom: "Grenouille dorée", icon: "🐸", signif: "1 par année d'élection au conseil d'université", porteurs: ["+ 1 porteur (non résolu)"], anciens: ["+ 1 ancien porteur (non résolu)"] },
+          { nom: "Etoile dorée", icon: "🌟", signif: "VP étudiant d'université", porteurs: [], anciens: ["+ 1 ancien porteur (non résolu)"] },
+          { nom: "Etoile dorée sur ruban bleu", icon: "🌠", signif: "Mandat de délégué mutualiste", porteurs: [], anciens: [] },
+          { nom: "Balance", icon: "⚖️", signif: "Membre du conseil disciplinaire", porteurs: ["+ 2 porteurs (non résolus)"], anciens: [] }
+        ]
+      },
+      region: {
+        label: "Insigne de région",
+        cards: [
+          { nom: "Hermine", icon: "🐈‍⬛", signif: "Breton", porteurs: ["+ 2 porteurs (non résolus)"], anciens: [] },
+          { nom: "Lion héraldique couché", icon: "🐅", signif: "Normand", porteurs: ["+ 2 porteurs (non résolus)"], anciens: ["Mamma Mia !","Boule de Neige","+ 1 autre ancien porteur (non résolu)"] },
+          { nom: "Chardon", icon: "💮", signif: "Lorrain", porteurs: [], anciens: [] },
+          { nom: "Sabot", icon: "👣", signif: "Breton monté à Paris pour ses études", porteurs: [], anciens: [] },
+          { nom: "Fennec", icon: "🦊", signif: "Français d'origine algérienne", porteurs: ["+ 2 porteurs (non résolus)"], anciens: ["Mercury","Bès le Furieux"] },
+          { nom: "Cigale", icon: "🦗", signif: "PACA", porteurs: ["+ 1 porteur (non résolu)"], anciens: [] },
+          { nom: "Sanglier", icon: "🐗", signif: "Ardennais", porteurs: [], anciens: [] },
+          { nom: "Cigogne", icon: "🦢", signif: "Alsacien", porteurs: [], anciens: [] },
+          { nom: "Lézard", icon: "🦎", signif: "Corse", porteurs: ["Magnum","GOReGONEION"], anciens: ["Gargantua"] },
+          { nom: "Sacré cœur vendéen", icon: "💛", signif: "Vendéen", porteurs: [], anciens: ["+ 1 ancien porteur (non résolu)"] },
+          { nom: "Taste-vin", icon: "🍷", signif: "Bourguignon", porteurs: ["Merryadoc","Black Swan"], anciens: [] },
+          { nom: "Lion dressé", icon: "🦁", signif: "Lyonnais", porteurs: [], anciens: [] }
+        ]
+      },
+      sanctions: {
+        label: "Sanction",
+        cards: [
+          { nom: "Biais noir", icon: "🏴", signif: "Blâme", porteurs: ["Néo intronisé Dracarys réintronisé Haku 2.0","+ 1 autre porteur (non résolu)"], anciens: ["Bès le Furieux","Pendragon","Gargantua","Nautilus","KCALASHNIKOFF 1.1","+ 3 autres anciens porteurs (non résolus)"] },
+          { nom: "Lime sur velours noir", icon: "✒️", signif: "Manque de respect aux croix", porteurs: ["Kirby","Black Swan","Sirius","JOKER","+ 1 autre porteur (non résolu)"], anciens: ["Pendragon","Nautilus","Armor Amore","+ 2 autres anciens porteurs (non résolus)"] },
+          { nom: "Lime croisée ciseaux", icon: "✂️", signif: "Couture lente et difficile", porteurs: ["Bastet","Dame Arlequin","+ 2 autres porteurs (non résolus)"], anciens: ["+ 2 anciens porteurs (non résolus)"] },
+          { nom: "Zéro sur velours noir", icon: "⚫", signif: "0 de conduite", porteurs: ["Pierrot","Snoop Doug","+ 1 autre porteur (non résolu)"], anciens: ["Loyal","+ 5 autres anciens porteurs (non résolus)"] }
+        ]
+      }
+    }
+  }
+};
+ 
+// ============================================================================
+// LOGIC
+// ============================================================================
+let currentCat = "decernements";
+let currentSub = "insignes";
+let deck = [];
+let index = 0;
+let flipped = false;
+ 
+const elCard = document.getElementById('fc-card');
+const elIcon = document.getElementById('fc-icon');
+const elName = document.getElementById('fc-name');
+const elBackName = document.getElementById('fc-back-name');
+const elSignif = document.getElementById('fc-signif');
+const elSignifTitle = document.getElementById('fc-signif-title');
+const elCreators = document.getElementById('fc-creators');
+const elCreatorsSection = document.getElementById('fc-creators-section');
+const elPorteurs = document.getElementById('fc-porteurs');
+const elPorteursSection = document.getElementById('fc-porteurs-section');
+const elCountPorteurs = document.getElementById('fc-count-porteurs');
+const elAnciens = document.getElementById('fc-anciens');
+const elAnciensSection = document.getElementById('fc-anciens-section');
+const elCatLabel = document.getElementById('fc-cat-label');
+const elFrontLabel = document.getElementById('fc-front-label');
+const elPos = document.getElementById('fc-position');
+const elBar = document.getElementById('fc-bar');
+const elTabsSub = document.getElementById('fc-tabs-sub');
+ 
+function isTodo(s) {
+  if (typeof s !== 'string') return false;
+  return s.startsWith('+ ') || s.includes('(non résolu');
+}
+ 
+function countItems(arr) {
+  let total = 0;
+  arr.forEach(n => {
+    const txt = typeof n === 'string' ? n : n.name;
+    const m = txt.match(/\+ (\d+)/);
+    if (m) total += parseInt(m[1]);
+    else total += 1;
+  });
+  return total;
+}
+ 
+function loadDeck() {
+  let source;
+  let labelData;
+  if (currentCat === 'autres') {
+    source = ALL_DATA.autres.sub[currentSub];
+    labelData = source;
+  } else {
+    source = ALL_DATA[currentCat];
+    labelData = source;
+  }
+  deck = source.cards.slice();
+  elCatLabel.textContent = labelData.label;
+  elFrontLabel.textContent = labelData.label;
+  elSignifTitle.textContent = (currentCat === 'ordres') ? 'Représentation' : 'Signification';
+  index = 0;
+  render();
+}
+ 
+function render() {
+  const c = deck[index];
+  elIcon.textContent = c.icon || '';
+  elIcon.style.display = c.icon ? '' : 'none';
+  elName.textContent = c.nom;
+  elBackName.textContent = (c.icon ? c.icon + ' ' : '') + c.nom;
+ 
+  // Signif (string ou array)
+  if (Array.isArray(c.signif)) {
+    if (c.signif.length === 1) {
+      elSignif.textContent = c.signif[0];
+    } else {
+      const ul = document.createElement('ul');
+      c.signif.forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        ul.appendChild(li);
+      });
+      elSignif.innerHTML = '';
+      elSignif.appendChild(ul);
+    }
+  } else {
+    elSignif.textContent = c.signif;
+  }
+ 
+  // Créateurs
+  elCreators.innerHTML = '';
+  if (!c.createurs || c.createurs.length === 0) {
+    elCreatorsSection.style.display = 'none';
+  } else {
+    elCreatorsSection.style.display = '';
+    c.createurs.forEach(n => {
+      const span = document.createElement('span');
+      span.className = isTodo(n) ? 'fc-porteur todo' : 'fc-porteur create';
+      span.textContent = n;
+      elCreators.appendChild(span);
+    });
+  }
+ 
+  // Porteurs
+  elPorteurs.innerHTML = '';
+  const totalPorteurs = countItems(c.porteurs || []);
+  elCountPorteurs.textContent = totalPorteurs;
+  if (!c.porteurs || c.porteurs.length === 0) {
+    const span = document.createElement('span');
+    span.className = 'fc-empty';
+    span.textContent = 'Aucun porteur actuel';
+    elPorteurs.appendChild(span);
+  } else {
+    c.porteurs.forEach(p => {
+      const span = document.createElement('span');
+      const isObj = typeof p === 'object';
+      const txt = isObj ? p.name : p;
+      const role = isObj ? p.role : null;
+      if (isTodo(txt)) {
+        span.className = 'fc-porteur todo';
+        span.textContent = txt;
+      } else if (role) {
+        span.className = 'fc-porteur role';
+        span.textContent = role + ' : ' + txt;
+      } else {
+        span.className = 'fc-porteur';
+        span.textContent = txt;
+      }
+      elPorteurs.appendChild(span);
+    });
+  }
+ 
+  // Anciens
+  elAnciens.innerHTML = '';
+  if (!c.anciens || c.anciens.length === 0) {
+    elAnciensSection.style.display = 'none';
+  } else {
+    elAnciensSection.style.display = '';
+    c.anciens.forEach(a => {
+      const span = document.createElement('span');
+      const isObj = typeof a === 'object';
+      const txt = isObj ? a.name : a;
+      const role = isObj ? a.role : null;
+      if (isTodo(txt)) {
+        span.className = 'fc-porteur todo';
+        span.textContent = txt;
+      } else if (role) {
+        span.className = 'fc-porteur ancien';
+        span.textContent = role + ' : ' + txt;
+      } else {
+        span.className = 'fc-porteur ancien';
+        span.textContent = txt;
+      }
+      elAnciens.appendChild(span);
+    });
+  }
+ 
+  elPos.textContent = (index + 1) + ' / ' + deck.length;
+  elBar.style.width = Math.round(((index + 1) / deck.length) * 100) + '%';
+  flipped = false;
+  elCard.classList.remove('flipped');
+}
+ 
+function flip() { flipped = !flipped; elCard.classList.toggle('flipped', flipped); }
+function next() { index = (index + 1) % deck.length; render(); }
+function prev() { index = (index - 1 + deck.length) % deck.length; render(); }
+ 
+function shuffle() {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  index = 0;
+  render();
+}
+ 
+function reset() { loadDeck(); }
+ 
+function switchCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.fc-tabs-main button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  if (cat === 'autres') {
+    elTabsSub.classList.add('visible');
+  } else {
+    elTabsSub.classList.remove('visible');
+  }
+  loadDeck();
+}
+ 
+function switchSub(sub) {
+  currentSub = sub;
+  document.querySelectorAll('.fc-tabs-sub button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sub === sub);
+  });
+  loadDeck();
+}
+ 
+// Bindings
+elCard.addEventListener('click', flip);
+document.getElementById('fc-flip').addEventListener('click', function(e) { e.stopPropagation(); flip(); });
+document.getElementById('fc-next').addEventListener('click', next);
+document.getElementById('fc-prev').addEventListener('click', prev);
+document.getElementById('fc-btn-shuffle').addEventListener('click', shuffle);
+document.getElementById('fc-btn-reset').addEventListener('click', reset);
+ 
+document.querySelectorAll('.fc-tabs-main button').forEach(btn => {
+  btn.addEventListener('click', () => switchCat(btn.dataset.cat));
+});
+document.querySelectorAll('.fc-tabs-sub button').forEach(btn => {
+  btn.addEventListener('click', () => switchSub(btn.dataset.sub));
+});
+ 
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
+  else if (e.key === 'ArrowRight') next();
+  else if (e.key === 'ArrowLeft') prev();
+  else if (e.key === 's' || e.key === 'S') shuffle();
+});
+ 
+// Init
+loadDeck();
+</script>
+</body>
+</html>
